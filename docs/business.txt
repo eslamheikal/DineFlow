@@ -1,0 +1,182 @@
+# 🍽️ DineFlow Microservices: Architecture & Business Workflow
+
+## 🧾 Overview
+**DineFlow** is a microservice-based platform designed to help restaurants manage menu items, reservations, orders, invoices, and secure documents. The system is structured around 8 microservices, plus a shared library for common code and contracts.
+
+🧾 Business Overview
+DineFlow is a SaaS platform for restaurants that:
+
+🧑‍🍳 Allows restaurant owners to manage their business
+🍽️ Lets customers browse menus, reserve tables, and order food online
+📊 Provides dashboards, order histories, and financial exports
+🧾 Accepts invoices and secure payments
+🔐 Supports multi-location access with secure roles (Owner, Staff, Customer)
+
+
+👥 User Roles :-
+-----------------
+| Role       | Permissions |
+|------------|-------------|
+| Customer   | Browse menu, reserve table, place order |
+| Staff      | Manage orders and reservations |
+| Owner      | Access invoices, update menu, manage staff |
+| Admin      | View reports, audit logs, system metrics |
+
+
+🔄 Common Workflows :-
+-----------------------
+    📅 1. Customer Makes a Reservation
+        Flow:
+            Frontend → POST /reservations
+            Gateway:
+                ✅ Validates JWT
+                ✅ Rate limits (e.g. 3 per hour)
+                ✅ Injects TraceId
+            ReservationService
+                Validates time slot
+                Saves reservation
+                Publishes log event → AuditService
+
+    🛒 2. Customer Places an Order
+        Flow:
+            Frontend → POST /orders
+            Gateway validates JWT → forwards to OrderService
+            OrderService:
+                Validates menu items with MenuService
+                Saves order
+                Sends notification to kitchen
+                Logs action to AuditService
+
+    📋 3. Owner Uploads Menu Item with Image
+        Flow:
+            Frontend → POST /menu/item with form (metadata + image)
+            Gateway → MenuService
+            MenuService:
+                Calls FileService to store image
+                Stores item metadata
+                Logs to AuditService
+
+    🧾 4. Owner Uploads an Invoice (Secure)
+        Flow:
+            Frontend → POST /invoices/upload with .pdf
+            Gateway:
+                Validates JWT & role
+                Enforces [Authorize(Policy = "CanUploadInvoices")]
+            InvoiceService:
+                Validates file type
+                Extracts metadata
+                Encrypts sensitive fields
+                Saves to secure store
+                Logs audit record → AuditService
+
+    📊 5. Admin Reviews Logs
+        Flow:
+            Frontend → GET /admin/audit/user/{id}
+            Gateway → forwards to AuditService
+            AuditService:
+                Authenticated via [Roles("Admin")]
+                Filters logs for traceability
+                Returns full history with trace IDs
+
+
+📦 Workflow Diagram :-
+-------------------
+    Legend:
+        🟩 = external-facing service
+        🟦 = internal microservice
+        🔐 = secure data
+        📶 = flows via Gateway
+
+                 +---------------------+
+                 |     Frontend SPA    |
+                 +---------+-----------+
+                           |
+                           ▼
+                    +------------+
+                    | Gateway API|
+                    +------------+
+                      |   |   |
+        ┌─────────────┘   |   └────────────────────┐
+        ▼                 ▼                        ▼
+  🟩 AuthService      🟦 MenuService           🟦 ReservationService
+     (login, JWT)        (view, edit)            (book, cancel)
+        |                  |                         |
+        ▼                  ▼                         ▼
+  ┌───────────┐     ┌────────────┐         ┌────────────────────┐
+  | AuditService| ◄─┤ FileService│         | OrderService       |
+  └────────────┘    └────────────┘         └─────────┬──────────┘
+         ▲                                       ▼
+         |                                 🟦 InvoiceService 🔐
+         └─────────────── AdminDashboard ───────────────┘
+
+
+
+🧱 Microservice Architecture :-
+--------------------------------
+
+🔍 AuditService	Tracks secure & activity actions (login, admin access, billing, etc.)
+    Responsibility	Details
+        📝 Structured logs	Track access to secure data (invoices, orders, reservations)
+        🧾 Immutable logs	Write-once, never modify
+        🧠 Trace ID support	Used with Serilog/OpenTelemetry
+        🧠 Who uses it?	AdminDashboard, any service needing secure audits
+
+👤 AuthService	Login, signup, role & token issuing
+    Responsibility	Details
+        🔐 Authentication	Login with email/password or external OAuth (Google, Azure AD)
+        🔏 Token issuing	JWT with roles/claims, refresh tokens
+        👥 Role management	Assign roles: Customer, Staff, Owner, Admin
+        📱 MFA & policies	Optional 2FA support, password policies
+        🧠 Who calls it?	All services for token validation, frontend login screens
+
+📁FileService – General File Handling
+    Responsibility	Details
+        📥 File upload	Handles general files (menu images, logos, documents)
+        🧾 Validate	MIME type, file size, extension
+        📦 Storage	Local disk, Azure Blob, or AWS S3
+        🔓 Not encrypted	For public assets (e.g. menu photos, banners)
+        🧠 Who uses it?	MenuService, ReservationService, Admin uploads
+
+🧠 GatewayService	Rate limiting, trace injection, token validation
+    Responsibility	Details
+        🌍 Entry point	Exposes a single public-facing endpoint
+        🔐 Security middleware	Token validation, IP blocks, API key enforcement
+        🚦 Rate limiting	Per route, per user/IP/client app
+        🧠 Request routing	Forwards calls to internal services (via Ocelot/YARP)
+        🧠 Logging/tracing	Injects correlation ID and logs start-to-end paths
+
+🧾 InvoiceService	Uploads bills, encrypts sensitive billing data
+    Responsibility	Details
+        📤 Invoice Upload	For restaurant billing, exports, accountant access
+        🔐 File encryption	Encrypts tax ID, totals before saving
+        📁 Secure storage	Only accessible to restaurant owners and admins
+        🧠 Audit log	Every upload and download is logged securely
+        🧠 Who uses it?	Owners, AdminDashboard, AuditService
+
+📋 MenuService	Menu CRUD with image uploads
+    Responsibility	Details
+        🍔 CRUD menus	Create/update/delete menu categories and items
+        📸 Images	Upload menu item photos via FileService
+        ⚡ Caching	Cache most-requested items per location
+        🧠 Who uses it?	Customers browsing menus, owners editing menus
+
+📦 OrderService	Handles placing, updating, and retrieving orders
+    Responsibility	Details
+        🛒 Place orders	Customer orders from a location’s menu
+        🚚 Update status	Kitchen staff can mark order as "Preparing", "Delivered", etc.
+        🔐 Role-based updates	Staff can only change orders for their branch
+        🧠 Who uses it?	Customers, Kitchen staff, AnalyticsService
+
+📅 ReservationService Manages table reservations, availability
+    Responsibility	Details
+        📅 Make reservations	Accept booking requests by date/time/party size
+        🕓 Check availability	Prevents double bookings or time conflicts
+        🚫 Rate limiting	Prevent abuse: 3 per hour/user
+        🧠 Who uses it?	Customers, staff (in UI or POS), AdminDashboard
+
+🔁 Shared Common Code Library (not a service)
+    Purpose	Contents
+        🧩 Reusability	DTOs, middleware, helpers, error contracts
+        🧠 Shared.Infrastructure	Serilog config, exception filters, tracing helpers
+        🧠 Shared.Contracts	UserDto, UploadFileDto, etc.
+        🧠 Shared.Domain	Common value objects (e.g., Email, UserId)

@@ -1,0 +1,155 @@
+# 🍽️ DineFlow Microservices: Architecture & Business Workflow
+
+## 🮾 Overview
+**DineFlow** is a microservice-based platform designed to help restaurants manage menu items, reservations, orders, invoices, and secure documents. The system is structured around 8 microservices, plus a shared library for common code and contracts.
+
+---
+
+## 👥 User Roles
+| Role       | Permissions |
+|------------|-------------|
+| Customer   | Browse menu, reserve table, place order |
+| Staff      | Manage orders and reservations |
+| Owner      | Access invoices, update menu, manage staff |
+| Admin      | View reports, audit logs, system metrics |
+
+---
+
+## 🧱 Microservices Breakdown
+
+### 1. **AuthService** 🔐
+- Handles user login, registration, JWT token issuing.
+- Manages roles and claims (Customer, Staff, Owner, Admin).
+- Secures endpoints with `[Authorize]` and policies.
+
+**API Endpoints:**
+- `POST /auth/login`
+- `POST /auth/register`
+- `GET /auth/me`
+- `GET /auth/roles`
+
+### 2. **MenuService** 📋
+- Manages restaurant menu items and categories.
+- Supports image upload via FileService.
+- Provides cached endpoints for menu browsing.
+
+**API Endpoints:**
+- `GET /menu/location/{locationId}`
+- `POST /menu/item`
+- `PUT /menu/item/{id}`
+- `DELETE /menu/item/{id}`
+
+### 3. **OrderService** 💲
+- Handles order placement, status updates.
+- Staff can manage orders by branch.
+- Integrates with AuditService for tracking actions.
+
+**API Endpoints:**
+- `POST /orders`
+- `GET /orders/{orderId}`
+- `PUT /orders/{orderId}/status`
+- `GET /orders/user/{userId}`
+
+### 4. **ReservationService** 🗕️
+- Handles table reservations with date/time and party size.
+- Applies rate limits to prevent abuse.
+- Validates slots to avoid double booking.
+
+**API Endpoints:**
+- `POST /reservations`
+- `GET /reservations/user/{userId}`
+- `DELETE /reservations/{reservationId}`
+
+### 5. **InvoiceService** 🧾
+- Upload and manage invoices (PDFs).
+- Encrypts sensitive fields before storage.
+- Sends logs to AuditService.
+
+**API Endpoints:**
+- `POST /invoices/upload`
+- `GET /invoices/user/{userId}`
+- `GET /invoices/{invoiceId}`
+
+### 6. **FileService** 📁
+- Uploads and stores files (menu images, invoices).
+- Validates file type, size, and format.
+- Used by MenuService and InvoiceService.
+
+**API Endpoints:**
+- `POST /files/upload`
+- `GET /files/{fileId}`
+- `DELETE /files/{fileId}`
+
+### 7. **AuditService** 🔍
+- Collects secure logs from all services.
+- Provides traceable, immutable activity logs.
+- Used by AdminDashboard to view audit trails.
+
+**API Endpoints:**
+- `GET /audit/user/{userId}`
+- `GET /audit/file/{fileId}`
+- `GET /audit/events?traceId={traceId}`
+- `POST /audit/log`
+
+### 8. **GatewayService** 🌐
+- Acts as API gateway.
+- Validates JWTs, enforces rate limiting, routes traffic.
+- Adds correlation ID for distributed tracing.
+
+**API Endpoints:**
+- `GET /api/{service}/{endpoint}` → routes to internal services
+
+### 9. **Shared** 🔁
+- Common DTOs, middleware, value objects.
+- Logging helpers, encryption helpers, validation contracts.
+
+---
+
+## 🔄 Example Workflow: Uploading an Invoice
+
+1. **Owner logs in** via `AuthService` and receives JWT.
+2. **Frontend sends invoice** via `POST /invoices/upload`.
+3. **GatewayService** validates token, injects trace ID.
+4. **InvoiceService**:
+   - Validates file (.pdf, < 5MB)
+   - Extracts metadata and encrypts sensitive fields
+   - Stores file via FileService
+   - Logs event to AuditService
+
+---
+
+## 🔄 Example Workflow: Customer Places Order
+
+1. **Customer logs in** and places order.
+2. **Frontend calls `POST /orders`**.
+3. **GatewayService** checks token and routes to `OrderService`.
+4. **OrderService**:
+   - Validates menu items with MenuService
+   - Saves order and sets status
+   - Logs activity to AuditService
+
+---
+
+## 🧫 Observability & Security
+
+- **Distributed Tracing:** Correlation ID via middleware
+- **Audit Logging:** Sensitive actions (e.g. uploads, deletions)
+- **Rate Limiting:** API gateway enforces per-user limits
+- **Validation:** DTO validation and anti-malicious patterns
+- **Encryption:** InvoiceService encrypts PII before storing
+
+---
+
+## 🧲 Service Communication Summary
+| From            | To              | Type        |
+|----------------|-----------------|-------------|
+| GatewayService | All Services    | HTTP/REST   |
+| OrderService   | MenuService     | REST        |
+| MenuService    | FileService     | REST        |
+| InvoiceService | FileService     | REST        |
+| All Services   | AuditService    | HTTP/Event  |
+| AdminDashboard | AuditService    | HTTP        |
+
+---
+
+This document gives your team a clear overview of how DineFlow services are organized, integrated, and secured. You can now use this as a base for onboarding, documentation, and architecture presentations.
