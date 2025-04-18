@@ -1,14 +1,16 @@
-using Shared.Domain.ValueObjects;
+using Shared.Domain.Common;
+using System.Linq.Expressions;
 
 namespace Shared.Domain.Repositories;
 
 public interface IRepository<T> where T : BaseEntity
 {
-    Task<T> GetByIdAsync(Guid id);
-    Task<IEnumerable<T>> GetAllAsync();
-    Task<T> AddAsync(T entity);
-    Task UpdateAsync(T entity);
-    Task DeleteAsync(Guid id);
-    Task<bool> ExistsAsync(Guid id);
-    Task<int> SaveChangesAsync();
-} 
+    void Add(T entity);
+    void Update(T entity);
+    Task<T> GetAsync(Expression<Func<T, bool>> predicate, Expression<Func<T, object>>[]? includes = null);
+    Task<List<T>> GetListAsync(Expression<Func<T, bool>> predicate = null!);
+    Task<List<T>> GetListReadOnlyAsync(Expression<Func<T, bool>> predicate = null!, Expression<Func<T, object>>[]? includes = null);
+    public void Delete(int id);
+    Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
+    Task AddRangeAsync(List<T> entities);
+}

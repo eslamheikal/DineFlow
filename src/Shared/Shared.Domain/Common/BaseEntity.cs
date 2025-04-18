@@ -1,6 +1,6 @@
-namespace Shared.Domain.ValueObjects;
+namespace Shared.Domain.Common;
 
 public class BaseEntity
 {
     public int Id { get; set; }
-} 
+}

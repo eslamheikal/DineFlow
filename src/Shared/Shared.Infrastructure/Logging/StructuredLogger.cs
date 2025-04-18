@@ -71,6 +71,36 @@ public class StructuredLogger<T>
         }
     }
 
+    public async Task<TResult> LogOperationAsync<TResult>(string operation, Func<Task<TResult>> action)
+    {
+        var operationId = Guid.NewGuid().ToString();
+        var stopwatch = Stopwatch.StartNew();
+
+        using (LogContext.PushProperty("OperationId", operationId))
+        using (LogContext.PushProperty("ServiceName", _serviceName))
+        {
+            try
+            {
+                _logger.LogInformation("Starting operation {Operation} in {Service}", operation, _serviceName);
+
+                var result = await action();
+
+                stopwatch.Stop();
+                _logger.LogInformation("Completed operation {Operation} in {Service} in {Elapsed}ms",
+                    operation, _serviceName, stopwatch.ElapsedMilliseconds);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "Failed operation {Operation} in {Service} after {Elapsed}ms",
+                    operation, _serviceName, stopwatch.ElapsedMilliseconds);
+                throw;
+            }
+        }
+    }
+
     public void LogEvent(string eventName, Dictionary<string, object>? properties = null)
     {
         var eventId = Guid.NewGuid().ToString();
