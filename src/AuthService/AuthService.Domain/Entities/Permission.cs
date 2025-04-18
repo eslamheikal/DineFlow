@@ -13,7 +13,7 @@ public class Permission : BaseEntity
 
     private Permission() { } // For EF Core
 
-    public static Permission Create(string name, string resource, string action, string? description)
+    public static Permission Create(string name, string resource, string action, string? description = null)
     {
         return new Permission
         {
@@ -24,7 +24,7 @@ public class Permission : BaseEntity
         };
     }
 
-    public void Update(string name, string resource, string action, string? description)
+    public void Update(string name, string resource, string action, string? description = null)
     {
         Name = name;
         Description = description;

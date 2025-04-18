@@ -7,22 +7,22 @@ namespace AuthService.Infrastructure.Repositories;
 
 public class Repository<T> : IRepository<T> where T : BaseEntity
 {
-    protected readonly DbContext context;
+    protected readonly DbContext _context;
     protected readonly DbSet<T> _entities;
     public Repository(DbContext context)
     {
-        this.context = context;
+        _context = context;
         _entities = context.Set<T>();
     }
     protected virtual IQueryable<T> Entities { get => _entities; }
     protected IQueryable<E> GetEntiry<E>() where E : class
     {
-        return context.Set<E>();
+        return _context.Set<E>();
     }
 
     protected DbSet<E> GetDbSet<E>() where E : class
     {
-        return context.Set<E>();
+        return _context.Set<E>();
     }
 
     public void Add(T entity)
@@ -33,15 +33,6 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
     public void Update(T entity)
     {
         _entities.Update(entity);
-    }
-
-    public void Delete(int id)
-    {
-        var entity = _entities.Find(id);
-        if (entity != null)
-        {
-            _entities.Remove(entity);
-        }
     }
 
     public Task<T> GetAsync(Expression<Func<T, bool>> predicate, Expression<Func<T, object>>[]? includes = null)
@@ -73,7 +64,15 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         return query;
     }
 
- 
+    public void Delete(int id)
+    {
+        var entity = _entities.Find(id);
+        if (entity != null)
+        {
+            _entities.Remove(entity);
+        }
+    }
+
     public async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
     {
         return await Entities.AnyAsync(predicate);

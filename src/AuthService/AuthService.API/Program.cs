@@ -1,9 +1,20 @@
+using AuthService.API.Extensions;
+using Shared.Infrastructure.Middlewares;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddControllers();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddAppContext().AddRepositories();
+builder.Services.AddServices();
+builder.Services.AddMediatR().AddPipelineBehavior();
+builder.Services.AddJwtAuthentication();
+builder.Services.AddCORS();
 
 var app = builder.Build();
 
@@ -16,29 +27,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapGet("/health", () =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    return "AuthService is running ...";
 })
-.WithName("GetWeatherForecast")
+.WithName("Health")
 .WithOpenApi();
 
-app.Run();
+app.UseAuthentication();
+app.UseAuthorization();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+app.MapControllers();
+
+app.UseExceptionHandling();
+app.UseCorrelationId();
+
+app.Run();

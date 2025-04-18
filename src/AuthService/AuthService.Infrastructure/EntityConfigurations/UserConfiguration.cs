@@ -10,9 +10,16 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.HasKey(e => e.Id);
 
-        builder.Property(e => e.Email)
-            .HasMaxLength(255)
-            .IsRequired();
+        builder.OwnsOne(e => e.Email, emailBuilder =>
+        {
+            emailBuilder.Property(e => e.Value)
+                .HasColumnName("Email")
+                .HasMaxLength(320)
+                .IsRequired();    
+
+            emailBuilder.HasIndex(e => e.Value)
+                .IsUnique();
+        });
 
         builder.Property(e => e.PasswordHash)
             .IsRequired();
@@ -30,9 +37,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(e => e.LastLoginAt)
             .IsRequired(false);
-
-        builder.HasIndex(e => e.Email)
-            .IsUnique();
 
         // Configure many-to-many relationship with Roles
         builder.HasMany(u => u.Roles)
