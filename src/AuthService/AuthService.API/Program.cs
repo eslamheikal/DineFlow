@@ -1,8 +1,6 @@
 using AuthService.API.Extensions;
-using AuthService.Infrastructure.Data;
-using AuthService.Infrastructure.Context;
+using Shared.Infrastructure.Logging;
 using Shared.Infrastructure.Middlewares;
-using AuthService.Domain.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +10,8 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Host.AddBuilderLogging("auth");
 
 builder.Services.AddAppContext().AddRepositories();
 builder.Services.AddServices();
@@ -39,12 +39,13 @@ app.MapGet("/health", () =>
 .WithName("Health")
 .WithOpenApi();
 
+app.UseExceptionHandling();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.UseExceptionHandling();
 app.UseCorrelationId();
 
 app.Run();

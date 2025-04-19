@@ -1,9 +1,21 @@
+using GatewayService.API.Extensions;
+using Microsoft.IdentityModel.Tokens;
+using Shared.Infrastructure.Logging;
+using Shared.Infrastructure.Middlewares;
+using System.Diagnostics;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+builder.Host.AddBuilderLogging("gateway");
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddJwtAuthentication();
 
 var app = builder.Build();
 
@@ -14,31 +26,30 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseAuthentication();
+
+app.UseAuthorization();
+
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.MapReverseProxy();
 
-app.MapGet("/weatherforecast", () =>
+app.UseExceptionHandling();
+
+
+app.UseCorrelationId();
+
+app.Use((context, next) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+    var traceId = Activity.Current?.TraceId;
+    // Push to Serilog context
+    //using (Serilog.Context.LogContext.PushProperty("CorrelationId", traceId.ToString()))
+    //{
+    //    next.Invoke(context);
+    //}
+
+    return next(context);
+});
+
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

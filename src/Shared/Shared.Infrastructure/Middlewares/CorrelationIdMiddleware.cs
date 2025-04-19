@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Serilog.Context;
 
 namespace Shared.Infrastructure.Middlewares;
 
@@ -21,7 +22,10 @@ public class CorrelationIdMiddleware
         context.TraceIdentifier = correlationId;
         context.Request.Headers[HeaderKey] = correlationId;
 
-        await _next(context);
+        using (LogContext.PushProperty("CorrelationId", string.IsNullOrEmpty(correlationId) ? "" : $" [TraceId:{correlationId}]"))
+        {
+            await _next(context);
+        }
     }
 }
 

@@ -9,9 +9,11 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Shared.Contracts.Common;
 using Shared.Domain.Repositories;
 using Shared.Infrastructure.Logging;
 using System.Text;
+using System.Text.Json;
 
 namespace AuthService.API.Extensions;
 
@@ -34,6 +36,26 @@ public static class SetupExtensions
                     ValidAudience = Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey is not configured")))
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        context.Response.StatusCode = 401;
+                        context.Response.ContentType = "application/json";
+
+                        var json = JsonSerializer.Serialize(ApiResponse<bool>.Fail("Invalid or expired token. Please log in again."));
+                        context.Response.WriteAsync(json);
+
+                        return Task.CompletedTask;
+                    },
+                    OnChallenge = context =>
+                    {
+                        // This will cause the exception to be thrown
+                        context.HandleResponse();
+                        return Task.CompletedTask;
+                    }
                 };
             });
 

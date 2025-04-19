@@ -55,6 +55,8 @@ public class JwtService : IJwtService
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+        key.KeyId = "dineflow-key-1";
+
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var expiresAt = DateTime.UtcNow.AddMinutes(_accessTokenExpirationMinutes);

@@ -21,7 +21,7 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, R
 
     public async Task<Result<UserProfileResponseDto>> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetAsync(r => r.Id == request.Id);
+        var user = await _userRepository.GetAsync(r => r.Id == request.Id, [r => r.Roles]);
         if (user == null)
         {
             _logger.LogWarning("User not found with ID: {UserId}", request.Id);
