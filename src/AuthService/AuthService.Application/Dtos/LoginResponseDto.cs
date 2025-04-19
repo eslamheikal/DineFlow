@@ -1,6 +1,6 @@
-namespace Shared.Contracts.Auth;
+namespace AuthService.Application.Dtos;
 
-public class LoginResponse
+public class LoginResponseDto
 {
     public string AccessToken { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;

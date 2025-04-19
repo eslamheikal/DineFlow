@@ -1,4 +1,4 @@
-﻿using AuthService.Application.Commands.CreateUser;
+﻿using AuthService.Application;
 using AuthService.Application.Services;
 using AuthService.Domain.Repositories;
 using AuthService.Domain.Services;
@@ -40,19 +40,6 @@ public static class SetupExtensions
         return services;
     }
 
-    public static void AddCORS(this IServiceCollection services)
-    {
-        services.AddCors(options =>
-        {
-            options.AddPolicy("AuthServicePolicy", builder =>
-            {
-                builder.AllowAnyOrigin()
-                       .AllowAnyHeader()
-                       .AllowAnyMethod();
-            });
-        });
-    }
-
     public static IServiceCollection AddAppContext(this IServiceCollection services)
     {
         var Configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
@@ -86,8 +73,7 @@ public static class SetupExtensions
     {
         services.AddMediatR(cfg =>
         {
-            cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
-            cfg.RegisterServicesFromAssembly(typeof(CreateUserCommand).Assembly);
+            cfg.RegisterServicesFromAssembly(typeof(AuthApplication).Assembly);
         });
 
         return services;

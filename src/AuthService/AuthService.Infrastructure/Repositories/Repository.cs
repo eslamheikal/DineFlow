@@ -30,6 +30,11 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         _entities.Add(entity);
     }
 
+    public void Attach(T entity)
+    {
+        _entities.Attach(entity);
+    }
+
     public void Update(T entity)
     {
         _entities.Update(entity);

@@ -52,9 +52,9 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
                 request.LastName);
 
             // Add roles if specified
-            if (request.RoleNames.Any())
+            if (request.RoleIds.Any())
             {
-                var roles = await _roleRepository.GetByNamesAsync(request.RoleNames);
+                var roles = await _roleRepository.GetByIdsAsync(request.RoleIds);
                 foreach (var role in roles)
                 {
                     user.AddRole(role);

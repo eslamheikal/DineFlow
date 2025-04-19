@@ -24,6 +24,14 @@ public class RoleRepository : Repository<Role>, IRoleRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Role>> GetByIdsAsync(IEnumerable<int> ids)
+    {
+        return await Entities
+            .Include(r => r.Permissions)
+            .Where(r => ids.Contains(r.Id))
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Role>> GetByPermissionAsync(string resource, string action)
     {
         return await Entities

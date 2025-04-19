@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Shared.Contracts.Auth;
+namespace AuthService.Application.Dtos;
 
-public class LoginRequest
+public class LoginRequestDto
 {
     [Required]
     [EmailAddress]

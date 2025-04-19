@@ -1,7 +1,14 @@
+using AuthService.Application.Dtos;
 using MediatR;
-using Shared.Contracts.Auth;
+using Shared.Domain.Attributes;
 using Shared.Domain.Common;
 
 namespace AuthService.Application.Commands.Login;
 
-public record LoginCommand(string Email, string Password) : IRequest<Result<LoginResponse>>;
+public record LoginCommand : IRequest<Result<LoginResponseDto>> 
+{
+    public string Email { get; set; } = string.Empty;
+
+    [IgnoreLogging]
+    public string Password { get; set; } = string.Empty;
+}

@@ -6,6 +6,7 @@ namespace Shared.Domain.Repositories;
 public interface IRepository<T> where T : BaseEntity
 {
     void Add(T entity);
+    void Attach(T entity);
     void Update(T entity);
     Task<T> GetAsync(Expression<Func<T, bool>> predicate, Expression<Func<T, object>>[]? includes = null);
     Task<List<T>> GetListAsync(Expression<Func<T, bool>> predicate = null!);

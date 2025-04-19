@@ -11,13 +11,23 @@ public class Role : BaseEntity
 
     private Role() { } // For EF Core
 
-    public static Role Create(string name, string? description)
+    public static Role Create(string name, string? description = null)
     {
         return new Role
         {
             Name = name,
             Description = description,
             Permissions = new(),
+        };
+    }
+
+    public static Role Create(string name, string? description = null, List<Permission>? permissions = null)
+    {
+        return new Role
+        {
+            Name = name,
+            Description = description,
+            Permissions = permissions ?? new(),
         };
     }
 

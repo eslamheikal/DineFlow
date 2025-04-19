@@ -1,15 +1,15 @@
+using AuthService.Application.Dtos;
 using AuthService.Domain.Repositories;
 using AuthService.Domain.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Shared.Contracts.Auth;
 using Shared.Domain.Common;
 using Shared.Domain.Repositories;
 using Shared.Infrastructure.Logging;
 
 namespace AuthService.Application.Commands.Login;
 
-public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginResponse>>
+public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginResponseDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserRepository _userRepository;
@@ -31,7 +31,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
         _logger = new StructuredLogger<LoginCommandHandler>(logger, "AuthService");
     }
 
-    public async Task<Result<LoginResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
+    public async Task<Result<LoginResponseDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         return await _logger.LogOperationAsync("Login", async () =>
         {
@@ -39,19 +39,19 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
             var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null)
             {
-                return Result<LoginResponse>.Failure("Invalid email or password");
+                return Result<LoginResponseDto>.Failure("Invalid email or password");
             }
 
             // Verify password
             if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return Result<LoginResponse>.Failure("Invalid email or password");
+                return Result<LoginResponseDto>.Failure("Invalid email or password");
             }
 
             // Check if user is active
             if (!user.IsActive)
             {
-                return Result<LoginResponse>.Failure("User account is deactivated");
+                return Result<LoginResponseDto>.Failure("User account is deactivated");
             }
 
             // Update last login
@@ -62,7 +62,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
             var (accessToken, refreshToken, expiresAt) = _jwtService.GenerateTokens(user);
 
             // Create response
-            var response = new LoginResponse
+            var response = new LoginResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
@@ -78,7 +78,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
                     .ToList()
             };
 
-            return Result<LoginResponse>.Success(response);
+            return Result<LoginResponseDto>.Success(response);
         });
     }
 } 

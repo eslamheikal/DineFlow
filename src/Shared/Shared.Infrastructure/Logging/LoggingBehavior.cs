@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Shared.Domain.Attributes;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace Shared.Infrastructure.Logging;
 
@@ -24,7 +26,7 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
         {
             _logger.LogInformation(
                 "Begin {RequestName} - TraceId: {TraceId} - Payload: {@Request}",
-                requestName, traceId, request);
+                requestName, traceId, SanitizeRequest(request));
 
             var response = await next();
 
@@ -43,5 +45,24 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 
             throw;
         }
+    }
+
+    private static object SanitizeRequest(TRequest request)
+    {
+        if (request == null) return null;
+
+        // Create anonymous object with sensitive data redacted
+        var sanitized = new Dictionary<string, object>();
+        var properties = typeof(TRequest).GetProperties();
+
+        foreach (var prop in properties)
+        {
+            var value = prop.GetValue(request);
+            sanitized[prop.Name] = prop.GetCustomAttribute<IgnoreLoggingAttribute>() != null
+                ? "***REDACTED***"
+                : value;
+        }
+
+        return sanitized;
     }
 }
